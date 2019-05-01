@@ -1,9 +1,9 @@
 [package]
 name = "timeseries"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["Krzysztof Langner <klangner@gmail.com>"]
-description = "Digital Signal Processing"
-keywords = ["dsp"]
+description = "time Series library"
+keywords = ["timeseries"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/klangner/timeseries.rs"
 homepage = "https://github.com/klangner/timeseries.rs"
