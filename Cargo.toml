@@ -1,0 +1,16 @@
+[package]
+name = "timeseries"
+version = "0.2.0"
+authors = ["Krzysztof Langner <klangner@gmail.com>"]
+description = "Digital Signal Processing"
+keywords = ["dsp"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/klangner/timeseries.rs"
+homepage = "https://github.com/klangner/timeseries.rs"
+documentation = "https://docs.rs/timeseries"
+edition = "2018"
+
+
+[dependencies]
+chrono = "0.4"
+rand = "0.6"
