@@ -1,6 +1,6 @@
 [package]
 name = "timeseries"
-version = "0.2.0"
+version = "0.1.2"
 authors = ["Krzysztof Langner <klangner@gmail.com>"]
 description = "Digital Signal Processing"
 keywords = ["dsp"]
