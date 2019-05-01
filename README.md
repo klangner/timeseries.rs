@@ -1,4 +1,4 @@
-# time Series library
+# Time Series library
 
 [![Build Status](https://travis-ci.org/klangner/timeseries.rs.svg?branch=master)](https://travis-ci.org/klangner/timeseries.rs)
 [![Crates.io](https://img.shields.io/crates/v/timeseries.svg)](https://crates.io/crates/timeseries) 
