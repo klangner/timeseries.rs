@@ -1,6 +1,6 @@
 [package]
 name = "timeseries"
-version = "0.1.3"
+version = "0.1.4"
 authors = ["Krzysztof Langner <klangner@gmail.com>"]
 description = "time Series library"
 keywords = ["timeseries"]
