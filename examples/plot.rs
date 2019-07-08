@@ -1,12 +1,15 @@
+use std::env;
 use gnuplot::{Figure, Color};
 
-use timeseries::series::TimeSeries;
+use timeseries::io::csv;
 
 
 fn main() {
-    let ts = TimeSeries::from_timestamp(0, 60, vec![1.0, 2.5, 3.2]);
+    let file_path = env::args().nth(1).unwrap();
+    let ts = csv::load_file(&file_path);
 
     let mut fg = Figure::new();
     fg.axes2d().lines(&ts.index, &ts.data, &[Color("blue")]);
     fg.show();
 }
+
