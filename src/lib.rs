@@ -135,7 +135,6 @@ impl TimeSeries {
     pub fn map(&self, f: fn(i64, f32) -> f32) -> TimeSeries {
         let zipped = self.index.iter().zip(self.data.iter());
         let data2: Vec<f32> = zipped.map(|(&x, &y)| f(x,y)).collect();
-        //let data2: Vec<f32> = self.data.iter().map(|&x| f(x)).collect();
         return TimeSeries::new(self.index.to_vec(), data2);
     }
 }
