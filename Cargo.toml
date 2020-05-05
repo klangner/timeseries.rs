@@ -13,9 +13,9 @@ edition = "2018"
 
 
 [dependencies]
+ndarray = "0.13"
 chrono = "0.4"
-rand = "0.6"
-lexical = "^2.2"
+rand = "0.7"
 csv = "1.1"
 
 [dev-dependencies]
