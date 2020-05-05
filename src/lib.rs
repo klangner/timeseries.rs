@@ -3,6 +3,7 @@
 //! Process Time Series in memory
 //!
 
+use std::iter::FromIterator;
 use ndarray::prelude::*;
 
 pub mod io;
@@ -115,46 +116,47 @@ impl TimeSeries {
         if pos > 0 { self.nth(pos-1) } else { 0.0 }
     }
 
-    /// Map over values
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use ndarray::prelude::*;
-    /// use timeseries::TimeSeries;
-    ///
-    /// let index = vec![100, 160, 220];
-    /// let data = vec![1.0, 2.5, 3.2];
-    /// fn double(z: f64) -> f64{2.0 * z}
-    /// let ts = TimeSeries::new(index, data);
-    /// assert_eq!(ts.map_values(double).values, array![2.0, 5.0, 6.4])
-    /// ```
-    pub fn map_values(&self, f: fn(f64) -> f64) -> TimeSeries {
-        let data2: Vec<f64> = self.values.iter().map(|&x| f(x)).collect();
-        return TimeSeries::new(self.index.to_vec(), data2);
-    }
+}
 
-    /// Map over indexes and  values
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use ndarray::prelude::*;
-    /// use timeseries::TimeSeries;
-    ///
-    /// fn double_even_index(i: i64, d: f64) -> f64 { if i & 1 == 0 { 2.0 * d } else { d }}
-    /// let data = vec![1.0, 2.5, 3.2, 4.0, 3.0];
-    /// let index = (0..data.len()).map(|i| i as i64).collect();        
-    /// let ts = TimeSeries::new(index, data);
-    /// assert_eq!(ts.map(double_even_index).values, array![2.0, 2.5, 6.4, 4.0, 6.0]);
-    /// ```
-    pub fn map(&self, f: fn(i64, f64) -> f64) -> TimeSeries {
-        let zipped = self.index.iter().zip(self.values.iter());
-        let data2: Vec<f64> = zipped.map(|(&x, &y)| f(x,y)).collect();
-        return TimeSeries::new(self.index.to_vec(), data2);
+
+impl IntoIterator for TimeSeries {
+    type Item = (i64, f64);
+    type IntoIter = TimeSeriesIntoIterator;
+
+    fn into_iter(self) -> Self::IntoIter {
+        TimeSeriesIntoIterator {
+            ts: self,
+            index: 0,
+        }
     }
 }
 
+pub struct TimeSeriesIntoIterator {
+    ts: TimeSeries,
+    index: usize,
+}
+
+impl Iterator for TimeSeriesIntoIterator {
+    type Item = (i64, f64);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index < self.ts.length() {
+            self.index += 1;
+            Some((self.ts.index[self.index-1], self.ts.values[self.index-1]))
+        } else {
+            None
+        }
+    }
+}
+
+impl FromIterator<(i64, f64)> for TimeSeries {
+    fn from_iter<T>(iter: T) -> Self
+    where
+        T: IntoIterator<Item = (i64, f64)> {
+
+        TimeSeries::from_records(iter.into_iter().collect())
+    }
+}
 
 /// ------------------------------------------------------------------------------------------------
 /// Module unit tests
@@ -180,21 +182,22 @@ mod tests {
 
     #[test]
     fn test_map() { 
-        fn double_even_index(i: i64, d: f64) -> f64 { if i & 1 == 0 { 2.0 * d } else { d }}
+        fn double_even_index((i, d) : (i64,f64)) -> (i64,f64) { 
+            (i, if i & 1 == 0 {2.0 * d} else {d} )
+        }
         let values = vec![1.0, 2.5, 3.2, 4.0, 3.0];
         let data2 = array![2.0, 2.5, 6.4, 4.0, 6.0];
         let index = (0..values.len()).map(|i| i as i64).collect();        
         let ts = TimeSeries::new(index, values);
-        assert_eq!(ts.map(double_even_index).values, data2);
+        let ts_out: TimeSeries = ts.into_iter().map(double_even_index).collect(); 
+        assert_eq!(ts_out.values, data2);
     }
 
     #[test]
-    fn test_map_values() {
-        fn double(z: f64) -> f64{2.0 * z}
+    fn test_into_iterator() {
         let values = vec![1.0, 2.5, 3.2, 4.0, 3.0];
-        let data2 = array![2.0, 5.0, 6.4, 8.0, 6.0];
         let index = (0..values.len()).map(|i| 60*i as i64).collect();        
         let ts = TimeSeries::new(index, values);
-        assert_eq!(ts.map_values(double).values, data2);
+        assert_eq!(ts.into_iter().count(), 5);
     }
 }
