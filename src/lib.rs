@@ -4,6 +4,8 @@
 //!
 
 use std::iter::FromIterator;
+use std::fmt;
+use chrono::NaiveDateTime;
 use ndarray::prelude::*;
 
 pub mod io;
@@ -116,27 +118,22 @@ impl TimeSeries {
         if pos > 0 { self.nth(pos-1) } else { 0.0 }
     }
 
-}
-
-
-impl IntoIterator for TimeSeries {
-    type Item = (i64, f64);
-    type IntoIter = TimeSeriesIntoIterator;
-
-    fn into_iter(self) -> Self::IntoIter {
-        TimeSeriesIntoIterator {
+    /// Create iterator
+    pub fn iter(&self) -> TimeSeriesIter {
+        TimeSeriesIter {
             ts: self,
             index: 0,
         }
     }
 }
 
-pub struct TimeSeriesIntoIterator {
-    ts: TimeSeries,
+
+pub struct TimeSeriesIter<'a> {
+    ts: &'a TimeSeries,
     index: usize,
 }
 
-impl Iterator for TimeSeriesIntoIterator {
+impl<'a> Iterator for TimeSeriesIter<'a> {
     type Item = (i64, f64);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -155,6 +152,23 @@ impl FromIterator<(i64, f64)> for TimeSeries {
         T: IntoIterator<Item = (i64, f64)> {
 
         TimeSeries::from_records(iter.into_iter().collect())
+    }
+}
+
+impl fmt::Display for TimeSeries {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fn write_record(f: &mut fmt::Formatter<'_>, r: (i64,f64)) {
+            let naive_datetime = NaiveDateTime::from_timestamp(r.0, 0);
+            let _ = write!(f, "({}, {})\n", naive_datetime, r.1);
+        };
+        if self.length() < 10 {
+            self.iter().for_each(|r| write_record(f, r));
+        } else {
+            self.iter().take(5).for_each(|r| write_record(f, r));
+            let _ = write!(f, "...\n");
+            self.iter().skip(self.length()-5).for_each(|r| write_record(f, r));
+        }
+        write!(f, "\n")
     }
 }
 
@@ -189,7 +203,7 @@ mod tests {
         let data2 = array![2.0, 2.5, 6.4, 4.0, 6.0];
         let index = (0..values.len()).map(|i| i as i64).collect();        
         let ts = TimeSeries::new(index, values);
-        let ts_out: TimeSeries = ts.into_iter().map(double_even_index).collect(); 
+        let ts_out: TimeSeries = ts.iter().map(double_even_index).collect(); 
         assert_eq!(ts_out.values, data2);
     }
 
@@ -198,6 +212,6 @@ mod tests {
         let values = vec![1.0, 2.5, 3.2, 4.0, 3.0];
         let index = (0..values.len()).map(|i| 60*i as i64).collect();        
         let ts = TimeSeries::new(index, values);
-        assert_eq!(ts.into_iter().count(), 5);
+        assert_eq!(ts.iter().count(), 5);
     }
 }
