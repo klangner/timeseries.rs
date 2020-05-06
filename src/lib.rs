@@ -23,6 +23,11 @@ pub struct TimeSeries {
 
 impl TimeSeries {
 
+    /// Create empty Time Series
+    pub fn empty() -> TimeSeries {
+        TimeSeries { index: vec![], values: arr1(&vec![])}
+    }
+
     /// Create a new Time Series from from index and data
     ///
     /// # Example
@@ -179,6 +184,12 @@ impl fmt::Display for TimeSeries {
 mod tests {
     use super::*;
     
+    #[test]
+    fn test_empty() {
+        let ts = TimeSeries::empty();
+        assert_eq!(ts.length(), 0);
+    }
+
     #[test]
     fn test_new() {
         let values = vec![1.0, 2.5, 3.2, 4.0, 3.0];
