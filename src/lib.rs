@@ -41,7 +41,19 @@ impl TimeSeries {
     /// assert_eq!(ts.length(), 5);
     /// ```
     pub fn new(index: Vec<i64>, values: Vec<f64>) -> TimeSeries {
-        TimeSeries { index, values: arr1(&values) }
+        let mut index_size = 1;
+        for i in 1..index.len() {
+            if index[i] <= index[i-1] {
+                break;
+            }
+            index_size = i+1;
+        }
+        if index_size != index.len() || index_size != values.len() {
+            let size = std::cmp::min(index_size, values.len());
+            TimeSeries { index: (&index[0..size]).to_vec(), values: arr1(&values[0..size]) }
+        } else {
+            TimeSeries { index, values: arr1(&values) }
+        }
     }
 
     /// Create a new Time Series from from rows of tuples of timestamp and value
@@ -56,8 +68,13 @@ impl TimeSeries {
     /// assert_eq!(ts.length(), 5);
     /// ```
     pub fn from_records(records: Vec<(i64,f64)>) -> TimeSeries {
-        let index = records.iter().map(|r| r.0).collect();
-        let values = records.iter().map(|r| r.1).collect();
+        let mut size = 1;
+        for i in 1..records.len() {
+            if records[i].0 <= records[i-1].0 { break }
+            size = i+1;
+        }
+        let index = records.iter().take(size).map(|r| r.0).collect();
+        let values = records.iter().take(size).map(|r| r.1).collect();
         TimeSeries { index, values }
     }
 
@@ -199,10 +216,33 @@ mod tests {
     }
 
     #[test]
+    fn test_new_different_lengths() {
+        let values = vec![1.0, 2.5, 3.2];
+        let index = vec![1, 2, 3, 4, 5];
+        let ts = TimeSeries::new(index, values);
+        assert_eq!(ts.length(), 3);
+    }
+
+    #[test]
+    fn test_new_increasing() {
+        let index = vec![1, 2, 3, 4, 3];
+        let values = vec![1.0, 2.5, 3.2, 4.4, 5.3];
+        let ts = TimeSeries::new(index, values);
+        assert_eq!(ts.length(), 4);
+    }
+
+    #[test]
     fn test_from_records() {
         let data = vec![(1, 1.0), (2, 2.5), (3, 3.2), (4, 4.0), (5, 3.0)];
         let ts = TimeSeries::from_records(data);
         assert_eq!(ts.length(), 5);
+    }
+
+    #[test]
+    fn test_from_records_increasing() {
+        let data = vec![(1, 1.0), (2, 2.5), (3, 3.2), (4, 4.0), (3, 3.0)];
+        let ts = TimeSeries::from_records(data);
+        assert_eq!(ts.length(), 4);
     }
 
     #[test]
