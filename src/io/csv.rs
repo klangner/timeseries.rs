@@ -6,7 +6,7 @@ use crate::TimeSeries;
 
 
 /// Load series from the given CSV file
-pub fn load_file(file_path: &str, datetime_format: &str) -> Result<TimeSeries, Box<dyn Error>> {
+pub fn read_from_file(file_path: &str, datetime_format: &str) -> Result<TimeSeries, Box<dyn Error>> {
     let mut rdr = Reader::from_path(file_path)?;
     let mut index: Vec<i64> = Vec::new();
     let mut data: Vec<f64> = Vec::new();
@@ -32,8 +32,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_load() {
-        let ts = load_file("testdata/rain.csv", "%Y-%m-%d %H:%M:%S%z").unwrap();
+    fn test_read() {
+        let ts = read_from_file("testdata/rain.csv", "%Y-%m-%d %H:%M:%S%z").unwrap();
         assert_eq!(ts.length(), 96670);
     }
 }

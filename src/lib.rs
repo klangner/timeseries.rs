@@ -5,6 +5,7 @@
 
 use std::iter::FromIterator;
 use std::fmt;
+use std::cmp;
 use chrono::NaiveDateTime;
 use ndarray::prelude::*;
 
@@ -104,15 +105,14 @@ impl TimeSeries {
     /// let index = vec![1, 2, 3, 4, 5];
     /// let data = vec![1.0, 2.5, 3.2, 4.0, 3.0];
     /// let ts = TimeSeries::new(index, data);
-    /// assert_eq!(ts.nth(1), 2.5);
-    /// assert_eq!(ts.nth(10), 0.0);
+    /// assert_eq!(ts.nth(1), Some((2, 2.5)));
+    /// assert_eq!(ts.nth(10), None);
     /// ```
-    pub fn nth(&self, pos: usize) -> f64 {
-        println!("pos = {:?}", pos); 
+    pub fn nth(&self, pos: usize) -> Option<(i64, f64)> {
         if pos < self.length() {
-            self.values[pos]
+            Some((self.index[pos], self.values[pos]))
         } else {
-            0.0
+            None
         }
     }
 
@@ -136,8 +136,7 @@ impl TimeSeries {
             Some(idx) => idx,
             _ => self.length(),
         };
-        println!("{} -> {}", timestamp, pos);
-        if pos > 0 { self.nth(pos-1) } else { 0.0 }
+        if pos > 0 { self.values[pos-1] } else { 0.0 }
     }
 
     /// Create iterator
@@ -146,6 +145,46 @@ impl TimeSeries {
             ts: self,
             index: 0,
         }
+    }
+
+    /// Merge 2 series. The resulting series will contain data points from both series
+    /// If series contains data point with the same timestamp, then the value 
+    /// from first series is taken
+    /// 
+    /// # Example
+    /// 
+    /// ```
+    /// ```
+    pub fn merge(&self, other: &TimeSeries) -> TimeSeries {
+        let mut output: Vec<(i64, f64)> = vec![];
+        let mut pos1 = 0;
+        let mut pos2 = 0;
+
+        while pos1 < self.length() || pos2 < other.length() {
+            if pos1 == self.length() {
+                output.push(other.nth(pos2).unwrap());
+                pos2 += 1;
+            } else if pos2 == other.length() {
+                output.push(self.nth(pos1).unwrap());
+                pos1 += 1;
+            } else {
+                let dp1 = self.nth(pos1).unwrap();
+                let dp2 = other.nth(pos2).unwrap();
+                if dp1.0 == dp2.0 {
+                    output.push(self.nth(pos1).unwrap());
+                    pos1 += 1;
+                    pos2 += 1;
+                } else if dp1.0 < dp2.0 {
+                    output.push(self.nth(pos1).unwrap());
+                    pos1 += 1;
+                } else {
+                    output.push(other.nth(pos2).unwrap());
+                    pos2 += 1;
+                }
+            }
+        } 
+
+        TimeSeries::from_records(output)
     }
 }
 
@@ -180,7 +219,7 @@ impl FromIterator<(i64, f64)> for TimeSeries {
 impl fmt::Display for TimeSeries {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fn write_record(f: &mut fmt::Formatter<'_>, r: (i64,f64)) {
-            let naive_datetime = NaiveDateTime::from_timestamp(r.0, 0);
+            let naive_datetime = NaiveDateTime::from_timestamp(r.0/1000, 0);
             let _ = write!(f, "({}, {})\n", naive_datetime, r.1);
         };
         if self.length() < 10 {
@@ -193,6 +232,14 @@ impl fmt::Display for TimeSeries {
         write!(f, "\n")
     }
 }
+
+impl cmp::PartialEq for TimeSeries {
+
+    fn eq(&self, other: &Self) -> bool {
+        self.index == other.index && self.values == self.values
+    }
+}
+
 
 /// ------------------------------------------------------------------------------------------------
 /// Module unit tests
@@ -251,11 +298,13 @@ mod tests {
             (i, if i & 1 == 0 {2.0 * d} else {d} )
         }
         let values = vec![1.0, 2.5, 3.2, 4.0, 3.0];
-        let data2 = array![2.0, 2.5, 6.4, 4.0, 6.0];
-        let index = (0..values.len()).map(|i| i as i64).collect();        
+        let expected_values = vec![2.0, 2.5, 6.4, 4.0, 6.0];
+        let index = (0..values.len()).map(|i| i as i64).collect();
+        let index_expected = (0..values.len()).map(|i| i as i64).collect();
         let ts = TimeSeries::new(index, values);
+        let ts_expected = TimeSeries::new(index_expected, expected_values);
         let ts_out: TimeSeries = ts.iter().map(double_even_index).collect(); 
-        assert_eq!(ts_out.values, data2);
+        assert_eq!(ts_out, ts_expected);
     }
 
     #[test]
@@ -265,4 +314,18 @@ mod tests {
         let ts = TimeSeries::new(index, values);
         assert_eq!(ts.iter().count(), 5);
     }
+
+    #[test]
+    fn test_merge() {
+        let data1 = vec![(10, 1.0), (20, 2.5), (30, 3.2), (40, 4.0), (50, 3.0)];
+        let data2 = vec![(40, 41.0), (45, 42.5), (50, 53.2), (55, 54.0), (60, 63.0)];
+        let expected = vec![(10, 1.0), (20, 2.5), (30, 3.2), (40, 4.0), (45, 42.5), (50, 3.2), 
+                            (55, 54.0), (60, 63.0)];
+        let ts1 = TimeSeries::from_records(data1);
+        let ts2 = TimeSeries::from_records(data2);
+        let ts_expected = TimeSeries::from_records(expected);
+        let ts_merged = ts1.merge(&ts2);
+        assert_eq!(ts_merged, ts_expected);
+    }
+
 }
