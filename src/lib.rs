@@ -14,11 +14,20 @@ pub mod io;
 
 /// Time Series with normalized data
 ///   * index - Index based on timestamp in millisecond resolution
-///   * data - Data points
+///   * values - Data points
 #[derive(Clone, Debug)]
 pub struct TimeSeries {
     pub index: Vec<i64>,
     pub values: Array1<f64>
+}
+
+/// Single data point
+///   * timestamp - Data point timestamp
+///   * value - Data point value
+#[derive(Clone, Debug)]
+pub struct DataPoint {
+    pub index: i64,
+    pub value: f64
 }
 
 
@@ -62,20 +71,24 @@ impl TimeSeries {
     /// # Example
     ///
     /// ```
-    /// use timeseries::TimeSeries;
+    /// use timeseries::{TimeSeries, DataPoint};
     ///
-    /// let data = vec![(1, 1.0), (2, 2.5), (3, 3.2), (4, 4.0), (5, 3.0)];
-    /// let ts = TimeSeries::from_records(data);
+    /// let data = vec![DataPoint::new(1, 1.0), 
+    ///                 DataPoint::new(2, 2.5), 
+    ///                 DataPoint::new(3, 3.2), 
+    ///                 DataPoint::new(4, 4.0), 
+    ///                 DataPoint::new(5, 3.0)];
+    /// let ts = TimeSeries::from_datapoints(data);
     /// assert_eq!(ts.length(), 5);
     /// ```
-    pub fn from_records(records: Vec<(i64,f64)>) -> TimeSeries {
+    pub fn from_datapoints(datapoints: Vec<DataPoint>) -> TimeSeries {
         let mut size = 1;
-        for i in 1..records.len() {
-            if records[i].0 <= records[i-1].0 { break }
+        for i in 1..datapoints.len() {
+            if datapoints[i].index <= datapoints[i-1].index { break }
             size = i+1;
         }
-        let index = records.iter().take(size).map(|r| r.0).collect();
-        let values = records.iter().take(size).map(|r| r.1).collect();
+        let index = datapoints.iter().take(size).map(|r| r.index).collect();
+        let values = datapoints.iter().take(size).map(|r| r.value).collect();
         TimeSeries { index, values }
     }
 
@@ -100,17 +113,17 @@ impl TimeSeries {
     /// # Example
     ///
     /// ```
-    /// use timeseries::TimeSeries;
+    /// use timeseries::{TimeSeries, DataPoint};
     ///
     /// let index = vec![1, 2, 3, 4, 5];
     /// let data = vec![1.0, 2.5, 3.2, 4.0, 3.0];
     /// let ts = TimeSeries::new(index, data);
-    /// assert_eq!(ts.nth(1), Some((2, 2.5)));
+    /// assert_eq!(ts.nth(1), Some(DataPoint::new(2, 2.5)));
     /// assert_eq!(ts.nth(10), None);
     /// ```
-    pub fn nth(&self, pos: usize) -> Option<(i64, f64)> {
+    pub fn nth(&self, pos: usize) -> Option<DataPoint> {
         if pos < self.length() {
-            Some((self.index[pos], self.values[pos]))
+            Some(DataPoint::new(self.index[pos], self.values[pos]))
         } else {
             None
         }
@@ -156,7 +169,7 @@ impl TimeSeries {
     /// ```
     /// ```
     pub fn merge(&self, other: &TimeSeries) -> TimeSeries {
-        let mut output: Vec<(i64, f64)> = vec![];
+        let mut output: Vec<DataPoint> = vec![];
         let mut pos1 = 0;
         let mut pos2 = 0;
 
@@ -170,11 +183,11 @@ impl TimeSeries {
             } else {
                 let dp1 = self.nth(pos1).unwrap();
                 let dp2 = other.nth(pos2).unwrap();
-                if dp1.0 == dp2.0 {
+                if dp1.index == dp2.index {
                     output.push(self.nth(pos1).unwrap());
                     pos1 += 1;
                     pos2 += 1;
-                } else if dp1.0 < dp2.0 {
+                } else if dp1.index < dp2.index {
                     output.push(self.nth(pos1).unwrap());
                     pos1 += 1;
                 } else {
@@ -184,7 +197,7 @@ impl TimeSeries {
             }
         } 
 
-        TimeSeries::from_records(output)
+        TimeSeries::from_datapoints(output)
     }
 }
 
@@ -195,39 +208,39 @@ pub struct TimeSeriesIter<'a> {
 }
 
 impl<'a> Iterator for TimeSeriesIter<'a> {
-    type Item = (i64, f64);
+    type Item = DataPoint;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.index < self.ts.length() {
             self.index += 1;
-            Some((self.ts.index[self.index-1], self.ts.values[self.index-1]))
+            Some(DataPoint::new(self.ts.index[self.index-1], self.ts.values[self.index-1]))
         } else {
             None
         }
     }
 }
 
-impl FromIterator<(i64, f64)> for TimeSeries {
+impl FromIterator<DataPoint> for TimeSeries {
     fn from_iter<T>(iter: T) -> Self
     where
-        T: IntoIterator<Item = (i64, f64)> {
+        T: IntoIterator<Item = DataPoint> {
 
-        TimeSeries::from_records(iter.into_iter().collect())
+        TimeSeries::from_datapoints(iter.into_iter().collect())
     }
 }
 
 impl fmt::Display for TimeSeries {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fn write_record(f: &mut fmt::Formatter<'_>, r: (i64,f64)) {
-            let naive_datetime = NaiveDateTime::from_timestamp(r.0/1000, 0);
-            let _ = write!(f, "({}, {})\n", naive_datetime, r.1);
+        fn write_record(f: &mut fmt::Formatter<'_>, r: DataPoint) {
+            let naive_datetime = NaiveDateTime::from_timestamp(r.index/1000, 0);
+            let _ = write!(f, "({}, {})\n", naive_datetime, r.value);
         };
         if self.length() < 10 {
-            self.iter().for_each(|r| write_record(f, r));
+            self.iter().for_each(|dp| write_record(f, dp));
         } else {
-            self.iter().take(5).for_each(|r| write_record(f, r));
+            self.iter().take(5).for_each(|dp| write_record(f, dp));
             let _ = write!(f, "...\n");
-            self.iter().skip(self.length()-5).for_each(|r| write_record(f, r));
+            self.iter().skip(self.length()-5).for_each(|dp| write_record(f, dp));
         }
         write!(f, "\n")
     }
@@ -237,6 +250,20 @@ impl cmp::PartialEq for TimeSeries {
 
     fn eq(&self, other: &Self) -> bool {
         self.index == other.index && self.values == self.values
+    }
+}
+
+impl DataPoint {
+
+    pub fn new(index: i64, value: f64) -> DataPoint {
+        DataPoint { index, value }
+    }
+}
+
+impl cmp::PartialEq for DataPoint {
+
+    fn eq(&self, other: &Self) -> bool {
+        self.index == other.index && self.value == self.value
     }
 }
 
@@ -280,22 +307,24 @@ mod tests {
 
     #[test]
     fn test_from_records() {
-        let data = vec![(1, 1.0), (2, 2.5), (3, 3.2), (4, 4.0), (5, 3.0)];
-        let ts = TimeSeries::from_records(data);
+        let data = vec![DataPoint::new(1, 1.0), DataPoint::new(2, 2.5), DataPoint::new(3, 3.2), 
+                        DataPoint::new(4, 4.0), DataPoint::new(5, 3.0)];
+        let ts = TimeSeries::from_datapoints(data);
         assert_eq!(ts.length(), 5);
     }
 
     #[test]
     fn test_from_records_increasing() {
-        let data = vec![(1, 1.0), (2, 2.5), (3, 3.2), (4, 4.0), (3, 3.0)];
-        let ts = TimeSeries::from_records(data);
+        let data = vec![DataPoint::new(1, 1.0), DataPoint::new(2, 2.5), DataPoint::new(3, 3.2), 
+                        DataPoint::new(4, 4.0), DataPoint::new(3, 3.0)];
+        let ts = TimeSeries::from_datapoints(data);
         assert_eq!(ts.length(), 4);
     }
 
     #[test]
     fn test_map() { 
-        fn double_even_index((i, d) : (i64,f64)) -> (i64,f64) { 
-            (i, if i & 1 == 0 {2.0 * d} else {d} )
+        fn double_even_index(dp : DataPoint) -> DataPoint { 
+            DataPoint::new(dp.index, if dp.index & 1 == 0 {2.0 * dp.value} else {dp.value})
         }
         let values = vec![1.0, 2.5, 3.2, 4.0, 3.0];
         let expected_values = vec![2.0, 2.5, 6.4, 4.0, 6.0];
@@ -317,13 +346,16 @@ mod tests {
 
     #[test]
     fn test_merge() {
-        let data1 = vec![(10, 1.0), (20, 2.5), (30, 3.2), (40, 4.0), (50, 3.0)];
-        let data2 = vec![(40, 41.0), (45, 42.5), (50, 53.2), (55, 54.0), (60, 63.0)];
-        let expected = vec![(10, 1.0), (20, 2.5), (30, 3.2), (40, 4.0), (45, 42.5), (50, 3.2), 
-                            (55, 54.0), (60, 63.0)];
-        let ts1 = TimeSeries::from_records(data1);
-        let ts2 = TimeSeries::from_records(data2);
-        let ts_expected = TimeSeries::from_records(expected);
+        let data1 = vec![DataPoint::new(10, 1.0), DataPoint::new(20, 2.5), DataPoint::new(30, 3.2), 
+                         DataPoint::new(40, 4.0), DataPoint::new(50, 3.0)];
+        let data2 = vec![DataPoint::new(40, 41.0), DataPoint::new(45, 42.5), DataPoint::new(50, 53.2), 
+                         DataPoint::new(55, 54.0), DataPoint::new(60, 63.0)];
+        let expected = vec![DataPoint::new(10, 1.0), DataPoint::new(20, 2.5), DataPoint::new(30, 3.2), 
+                            DataPoint::new(40, 4.0), DataPoint::new(45, 42.5), DataPoint::new(50, 3.2), 
+                            DataPoint::new(55, 54.0), DataPoint::new(60, 63.0)];
+        let ts1 = TimeSeries::from_datapoints(data1);
+        let ts2 = TimeSeries::from_datapoints(data2);
+        let ts_expected = TimeSeries::from_datapoints(expected);
         let ts_merged = ts1.merge(&ts2);
         assert_eq!(ts_merged, ts_expected);
     }
