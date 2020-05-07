@@ -26,7 +26,7 @@ pub struct TimeSeries {
 ///   * value - Data point value
 #[derive(Clone, Debug)]
 pub struct DataPoint {
-    pub index: i64,
+    pub timestamp: i64,
     pub value: f64
 }
 
@@ -84,10 +84,10 @@ impl TimeSeries {
     pub fn from_datapoints(datapoints: Vec<DataPoint>) -> TimeSeries {
         let mut size = 1;
         for i in 1..datapoints.len() {
-            if datapoints[i].index <= datapoints[i-1].index { break }
+            if datapoints[i].timestamp <= datapoints[i-1].timestamp { break }
             size = i+1;
         }
-        let index = datapoints.iter().take(size).map(|r| r.index).collect();
+        let index = datapoints.iter().take(size).map(|r| r.timestamp).collect();
         let values = datapoints.iter().take(size).map(|r| r.value).collect();
         TimeSeries { index, values }
     }
@@ -183,11 +183,11 @@ impl TimeSeries {
             } else {
                 let dp1 = self.nth(pos1).unwrap();
                 let dp2 = other.nth(pos2).unwrap();
-                if dp1.index == dp2.index {
+                if dp1.timestamp == dp2.timestamp {
                     output.push(self.nth(pos1).unwrap());
                     pos1 += 1;
                     pos2 += 1;
-                } else if dp1.index < dp2.index {
+                } else if dp1.timestamp < dp2.timestamp {
                     output.push(self.nth(pos1).unwrap());
                     pos1 += 1;
                 } else {
@@ -232,7 +232,7 @@ impl FromIterator<DataPoint> for TimeSeries {
 impl fmt::Display for TimeSeries {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fn write_record(f: &mut fmt::Formatter<'_>, r: DataPoint) {
-            let naive_datetime = NaiveDateTime::from_timestamp(r.index/1000, 0);
+            let naive_datetime = NaiveDateTime::from_timestamp(r.timestamp/1000, 0);
             let _ = write!(f, "({}, {})\n", naive_datetime, r.value);
         };
         if self.length() < 10 {
@@ -255,15 +255,15 @@ impl cmp::PartialEq for TimeSeries {
 
 impl DataPoint {
 
-    pub fn new(index: i64, value: f64) -> DataPoint {
-        DataPoint { index, value }
+    pub fn new(timestamp: i64, value: f64) -> DataPoint {
+        DataPoint { timestamp, value }
     }
 }
 
 impl cmp::PartialEq for DataPoint {
 
     fn eq(&self, other: &Self) -> bool {
-        self.index == other.index && self.value == self.value
+        self.timestamp == other.timestamp && self.value == self.value
     }
 }
 
@@ -324,7 +324,7 @@ mod tests {
     #[test]
     fn test_map() { 
         fn double_even_index(dp : DataPoint) -> DataPoint { 
-            DataPoint::new(dp.index, if dp.index & 1 == 0 {2.0 * dp.value} else {dp.value})
+            DataPoint::new(dp.timestamp, if dp.timestamp & 1 == 0 {2.0 * dp.value} else {dp.value})
         }
         let values = vec![1.0, 2.5, 3.2, 4.0, 3.0];
         let expected_values = vec![2.0, 2.5, 6.4, 4.0, 6.0];
