@@ -6,6 +6,7 @@
 use std::iter::FromIterator;
 use std::fmt;
 use std::cmp;
+use serde::{Deserialize, Serialize};
 use chrono::NaiveDateTime;
 use ndarray::prelude::*;
 
@@ -24,7 +25,7 @@ pub struct TimeSeries {
 /// Single data point
 ///   * timestamp - Data point timestamp
 ///   * value - Data point value
-#[derive(Clone, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct DataPoint {
     pub timestamp: i64,
     pub value: f64
