@@ -18,7 +18,7 @@ pub mod io;
 ///   * values - Data points
 #[derive(Clone, Debug)]
 pub struct TimeSeries {
-    pub index: Vec<i64>,
+    pub index: Array1<i64>,
     pub values: Array1<f64>
 }
 
@@ -36,7 +36,7 @@ impl TimeSeries {
 
     /// Create empty Time Series
     pub fn empty() -> TimeSeries {
-        TimeSeries { index: vec![], values: arr1(&vec![])}
+        TimeSeries::new(vec![], vec![])
     }
 
     /// Create a new Time Series from from index and data
@@ -61,9 +61,9 @@ impl TimeSeries {
         }
         if index_size != index.len() || index_size != values.len() {
             let size = std::cmp::min(index_size, values.len());
-            TimeSeries { index: (&index[0..size]).to_vec(), values: arr1(&values[0..size]) }
+            TimeSeries { index: arr1(&index[0..size].to_vec()), values: arr1(&values[0..size].to_vec()) }
         } else {
-            TimeSeries { index, values: arr1(&values) }
+            TimeSeries { index: Array::from(index), values: Array::from(values) }
         }
     }
 
