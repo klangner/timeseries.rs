@@ -35,6 +35,15 @@ pub struct DataPoint {
 impl TimeSeries {
 
     /// Create empty Time Series
+    /// 
+    /// # Example
+    /// 
+    /// ```
+    /// use timeseries::TimeSeries;
+    /// 
+    /// let ts = TimeSeries::empty();
+    /// assert_eq!(ts.length(), 0);
+    /// ```
     pub fn empty() -> TimeSeries {
         TimeSeries::new(vec![], vec![])
     }
@@ -154,6 +163,17 @@ impl TimeSeries {
     }
 
     /// Create iterator
+    /// 
+    /// # Example
+    /// 
+    /// ```
+    /// use timeseries::TimeSeries;
+    /// 
+    /// let values = vec![1.0, 2.5, 3.2, 4.0, 3.0];
+    /// let index = (0..values.len()).map(|i| 60*i as i64).collect();        
+    /// let ts = TimeSeries::new(index, values);
+    /// assert_eq!(ts.iter().count(), 5);
+    /// ```
     pub fn iter(&self) -> TimeSeriesIter {
         TimeSeriesIter {
             ts: self,
@@ -168,6 +188,20 @@ impl TimeSeries {
     /// # Example
     /// 
     /// ```
+    /// use timeseries::{TimeSeries, DataPoint};
+    /// 
+    /// let data1 = vec![DataPoint::new(10, 1.0), DataPoint::new(20, 2.5), DataPoint::new(30, 3.2), 
+    ///                  DataPoint::new(40, 4.0), DataPoint::new(50, 3.0)];
+    /// let data2 = vec![DataPoint::new(40, 41.0), DataPoint::new(45, 42.5), DataPoint::new(50, 53.2), 
+    ///                  DataPoint::new(55, 54.0), DataPoint::new(60, 63.0)];
+    /// let expected = vec![DataPoint::new(10, 1.0), DataPoint::new(20, 2.5), DataPoint::new(30, 3.2), 
+    ///                     DataPoint::new(40, 4.0), DataPoint::new(45, 42.5), DataPoint::new(50, 3.2), 
+    ///                     DataPoint::new(55, 54.0), DataPoint::new(60, 63.0)];
+    /// let ts1 = TimeSeries::from_datapoints(data1);
+    /// let ts2 = TimeSeries::from_datapoints(data2);
+    /// let ts_expected = TimeSeries::from_datapoints(expected);
+    /// let ts_merged = ts1.merge(&ts2);
+    /// assert_eq!(ts_merged, ts_expected);
     /// ```
     pub fn merge(&self, other: &TimeSeries) -> TimeSeries {
         let mut output: Vec<DataPoint> = vec![];
@@ -277,12 +311,6 @@ mod tests {
     use super::*;
     
     #[test]
-    fn test_empty() {
-        let ts = TimeSeries::empty();
-        assert_eq!(ts.length(), 0);
-    }
-
-    #[test]
     fn test_new() {
         let values = vec![1.0, 2.5, 3.2, 4.0, 3.0];
         let index = (0..values.len()).map(|i| 60*i as i64).collect();        
@@ -335,14 +363,6 @@ mod tests {
         let ts_expected = TimeSeries::new(index_expected, expected_values);
         let ts_out: TimeSeries = ts.iter().map(double_even_index).collect(); 
         assert_eq!(ts_out, ts_expected);
-    }
-
-    #[test]
-    fn test_into_iterator() {
-        let values = vec![1.0, 2.5, 3.2, 4.0, 3.0];
-        let index = (0..values.len()).map(|i| 60*i as i64).collect();        
-        let ts = TimeSeries::new(index, values);
-        assert_eq!(ts.iter().count(), 5);
     }
 
     #[test]
