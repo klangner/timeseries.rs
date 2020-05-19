@@ -9,7 +9,7 @@ fn main() {
     let ts = csv::read_from_file(&file_path, "%Y-%m-%d %H:%M:%S").unwrap();
 
     let mut fg = Figure::new();
-    fg.axes2d().lines(&ts.index, &ts.values, &[Color("blue")]);
+    fg.axes2d().lines(&ts.index.values, &ts.values, &[Color("blue")]);
     fg.show();
 }
 

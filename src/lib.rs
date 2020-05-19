@@ -8,8 +8,10 @@ use std::fmt;
 use std::cmp;
 use serde::{Deserialize, Serialize};
 use chrono::NaiveDateTime;
-use ndarray::prelude::*;
 
+use crate::index::DateTimeIndex;
+
+pub mod index;
 pub mod io;
 
 
@@ -18,8 +20,8 @@ pub mod io;
 ///   * values - Data points
 #[derive(Clone, Debug)]
 pub struct TimeSeries {
-    pub index: Array1<i64>,
-    pub values: Array1<f64>
+    pub index: DateTimeIndex,
+    pub values: Vec<f64>
 }
 
 /// Single data point
@@ -42,7 +44,7 @@ impl TimeSeries {
     /// use timeseries::TimeSeries;
     /// 
     /// let ts = TimeSeries::empty();
-    /// assert_eq!(ts.length(), 0);
+    /// assert_eq!(ts.len(), 0);
     /// ```
     pub fn empty() -> TimeSeries {
         TimeSeries::new(vec![], vec![])
@@ -58,21 +60,15 @@ impl TimeSeries {
     /// let index = vec![1, 2, 3, 4, 5];
     /// let data = vec![1.0, 2.5, 3.2, 4.0, 3.0];
     /// let ts = TimeSeries::new(index, data);
-    /// assert_eq!(ts.length(), 5);
+    /// assert_eq!(ts.len(), 5);
     /// ```
     pub fn new(index: Vec<i64>, values: Vec<f64>) -> TimeSeries {
-        let mut index_size = 1;
-        for i in 1..index.len() {
-            if index[i] <= index[i-1] {
-                break;
-            }
-            index_size = i+1;
-        }
-        if index_size != index.len() || index_size != values.len() {
-            let size = std::cmp::min(index_size, values.len());
-            TimeSeries { index: arr1(&index[0..size].to_vec()), values: arr1(&values[0..size].to_vec()) }
+        if index.len() != values.len() {
+            let mut vs = values;
+            vs.resize(index.len(), 0.0);
+            TimeSeries { index: DateTimeIndex::new(index), values: vs }
         } else {
-            TimeSeries { index: Array::from(index), values: Array::from(values) }
+            TimeSeries { index: DateTimeIndex::new(index), values }
         }
     }
 
@@ -89,7 +85,7 @@ impl TimeSeries {
     ///                 DataPoint::new(4, 4.0), 
     ///                 DataPoint::new(5, 3.0)];
     /// let ts = TimeSeries::from_datapoints(data);
-    /// assert_eq!(ts.length(), 5);
+    /// assert_eq!(ts.len(), 5);
     /// ```
     pub fn from_datapoints(datapoints: Vec<DataPoint>) -> TimeSeries {
         let mut size = 1;
@@ -99,7 +95,7 @@ impl TimeSeries {
         }
         let index = datapoints.iter().take(size).map(|r| r.timestamp).collect();
         let values = datapoints.iter().take(size).map(|r| r.value).collect();
-        TimeSeries { index, values }
+        TimeSeries { index: DateTimeIndex::new(index), values }
     }
 
     /// Returns the number of elements in the series.
@@ -112,9 +108,9 @@ impl TimeSeries {
     /// let index = vec![1, 2, 3, 4, 5];
     /// let data = vec![1.0, 2.5, 3.2, 4.0, 3.0];
     /// let ts = TimeSeries::new(index, data);
-    /// assert_eq!(ts.length(), 5);
+    /// assert_eq!(ts.len(), 5);
     /// ```
-    pub fn length(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.index.len()
     }
 
@@ -132,7 +128,7 @@ impl TimeSeries {
     /// assert_eq!(ts.nth(10), None);
     /// ```
     pub fn nth(&self, pos: usize) -> Option<DataPoint> {
-        if pos < self.length() {
+        if pos < self.len() {
             Some(DataPoint::new(self.index[pos], self.values[pos]))
         } else {
             None
@@ -157,7 +153,7 @@ impl TimeSeries {
     pub fn at(&self, timestamp: i64) -> f64 {
         let pos = match self.index.iter().position(|&ts| timestamp < ts) {
             Some(idx) => idx,
-            _ => self.length(),
+            _ => self.len(),
         };
         if pos > 0 { self.values[pos-1] } else { 0.0 }
     }
@@ -208,11 +204,11 @@ impl TimeSeries {
         let mut pos1 = 0;
         let mut pos2 = 0;
 
-        while pos1 < self.length() || pos2 < other.length() {
-            if pos1 == self.length() {
+        while pos1 < self.len() || pos2 < other.len() {
+            if pos1 == self.len() {
                 output.push(other.nth(pos2).unwrap());
                 pos2 += 1;
-            } else if pos2 == other.length() {
+            } else if pos2 == other.len() {
                 output.push(self.nth(pos1).unwrap());
                 pos1 += 1;
             } else {
@@ -246,7 +242,7 @@ impl<'a> Iterator for TimeSeriesIter<'a> {
     type Item = DataPoint;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index < self.ts.length() {
+        if self.index < self.ts.len() {
             self.index += 1;
             Some(DataPoint::new(self.ts.index[self.index-1], self.ts.values[self.index-1]))
         } else {
@@ -270,12 +266,12 @@ impl fmt::Display for TimeSeries {
             let naive_datetime = NaiveDateTime::from_timestamp(r.timestamp/1000, 0);
             let _ = write!(f, "({}, {})\n", naive_datetime, r.value);
         };
-        if self.length() < 10 {
+        if self.len() < 10 {
             self.iter().for_each(|dp| write_record(f, dp));
         } else {
             self.iter().take(5).for_each(|dp| write_record(f, dp));
             let _ = write!(f, "...\n");
-            self.iter().skip(self.length()-5).for_each(|dp| write_record(f, dp));
+            self.iter().skip(self.len()-5).for_each(|dp| write_record(f, dp));
         }
         write!(f, "\n")
     }
@@ -315,7 +311,7 @@ mod tests {
         let values = vec![1.0, 2.5, 3.2, 4.0, 3.0];
         let index = (0..values.len()).map(|i| 60*i as i64).collect();        
         let ts = TimeSeries::new(index, values);
-        assert_eq!(ts.length(), 5);
+        assert_eq!(ts.len(), 5);
     }
 
     #[test]
@@ -323,15 +319,8 @@ mod tests {
         let values = vec![1.0, 2.5, 3.2];
         let index = vec![1, 2, 3, 4, 5];
         let ts = TimeSeries::new(index, values);
-        assert_eq!(ts.length(), 3);
-    }
-
-    #[test]
-    fn test_new_increasing() {
-        let index = vec![1, 2, 3, 4, 3];
-        let values = vec![1.0, 2.5, 3.2, 4.4, 5.3];
-        let ts = TimeSeries::new(index, values);
-        assert_eq!(ts.length(), 4);
+        assert_eq!(ts.len(), 5);
+        assert_eq!(ts.values[3], 0.0);
     }
 
     #[test]
@@ -339,7 +328,7 @@ mod tests {
         let data = vec![DataPoint::new(1, 1.0), DataPoint::new(2, 2.5), DataPoint::new(3, 3.2), 
                         DataPoint::new(4, 4.0), DataPoint::new(5, 3.0)];
         let ts = TimeSeries::from_datapoints(data);
-        assert_eq!(ts.length(), 5);
+        assert_eq!(ts.len(), 5);
     }
 
     #[test]
@@ -347,7 +336,7 @@ mod tests {
         let data = vec![DataPoint::new(1, 1.0), DataPoint::new(2, 2.5), DataPoint::new(3, 3.2), 
                         DataPoint::new(4, 4.0), DataPoint::new(3, 3.0)];
         let ts = TimeSeries::from_datapoints(data);
-        assert_eq!(ts.length(), 4);
+        assert_eq!(ts.len(), 4);
     }
 
     #[test]

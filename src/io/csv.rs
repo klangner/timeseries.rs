@@ -57,6 +57,6 @@ mod tests {
     #[test]
     fn test_read() {
         let ts = read_from_file("testdata/rain.csv", "%Y-%m-%d %H:%M:%S%z").unwrap();
-        assert_eq!(ts.length(), 96670);
+        assert_eq!(ts.len(), 96670);
     }
 }
