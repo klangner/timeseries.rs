@@ -1,5 +1,7 @@
 use std::ops::Index;
 use std::cmp;
+use std::iter::FromIterator;
+use std::collections::HashSet;
 
 
 /// DateTimeIndex is represented as an array of timestamps (i64)
@@ -43,6 +45,23 @@ impl DateTimeIndex {
     pub fn is_monotonic(&self) -> bool {
         self.values.iter().zip(self.values.iter().skip(1))
             .all(|(x,y)| x <= y)
+    }
+
+   /// Check if index is monotonic increasing
+    /// 
+    /// # Example
+    /// 
+    /// ```
+    /// use timeseries::index::DateTimeIndex;
+    /// 
+    /// let xs = DateTimeIndex::new(vec![1, 2, 3, 4]);
+    /// let ys = DateTimeIndex::new(vec![1, 2, 3, 2]);
+    /// assert!(xs.is_unique());
+    /// assert_eq!(ys.is_unique(), false);
+    /// ```
+    pub fn is_unique(&self) -> bool {
+        let set: HashSet<&i64> = HashSet::from_iter(self.values.iter());
+        set.len() == self.values.len()
     }
 
     /// Index length
