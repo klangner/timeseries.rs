@@ -25,6 +25,25 @@ impl DateTimeIndex {
     pub fn new(values: Vec<i64>) -> DateTimeIndex {
         DateTimeIndex { values }
     }
+    
+   /// Check if index is monotonic increasing
+    /// 
+    /// # Example
+    /// 
+    /// ```
+    /// use timeseries::index::DateTimeIndex;
+    /// 
+    /// let vs = DateTimeIndex::new(vec![1, 2, 3, 4]);
+    /// let xs = DateTimeIndex::new(vec![1, 2, 3, 3]);
+    /// let ys = DateTimeIndex::new(vec![1, 2, 3, 2]);
+    /// assert!(vs.is_monotonic(), true);
+    /// assert!(xs.is_monotonic(), true);
+    /// assert_eq!(ys.is_monotonic(), false);
+    /// ```
+    pub fn is_monotonic(&self) -> bool {
+        self.values.iter().zip(self.values.iter().skip(1))
+            .all(|(x,y)| x <= y)
+    }
 
     /// Index length
     pub fn len(&self) -> usize {
@@ -66,6 +85,18 @@ mod tests {
         let values = vec![1, 2, 3, 4, 3];
         let index = DateTimeIndex::new(values);
         assert_eq!(index.len(), 5);
+    }
+
+    #[test]
+    fn test_monotonic_empty() {
+        let index = DateTimeIndex::new(vec![]);
+        assert!(index.is_monotonic());
+    }
+
+    #[test]
+    fn test_monotonic_singleton() {
+        let index = DateTimeIndex::new(vec![1]);
+        assert!(index.is_monotonic());
     }
 
 }
