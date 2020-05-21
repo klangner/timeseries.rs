@@ -1,7 +1,7 @@
 use std::ops::Index;
 use std::cmp;
 use std::iter::FromIterator;
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 
 
 /// DateTimeIndex is represented as an array of timestamps (i64)
@@ -27,8 +27,40 @@ impl DateTimeIndex {
     pub fn new(values: Vec<i64>) -> DateTimeIndex {
         DateTimeIndex { values }
     }
+
+    /// Infer index sample rate
+    /// Sample rate is calculate as mode from the list of time differences.
+    /// 
+    /// # Example 
+    /// 
+    /// ```
+    /// use timeseries::index::DateTimeIndex;
+    /// 
+    /// let index = DateTimeIndex::new(vec![0, 10, 15, 20, 25, 27]);
+    /// assert_eq!(index.infer_sample_rate(), 5);
+    pub fn infer_sample_rate(&self) -> i64 {
+        let mut occurrences: HashMap<i64, i64> = HashMap::new();
+        let mut max: (i64, i64) = (0, 0);
+
+        let diffs: Vec<i64> = self.values.iter().zip(self.values.iter().skip(1))
+            .map(|(x,y)| y-x)
+            .collect();
+
+        for entry in diffs {
+            let count = occurrences.entry(entry).or_insert(0);
+            *count += 1;
+        }
+
+        for (&key, &val) in &occurrences {
+            if val > max.1 {
+                max = (key, val);
+            }
+        }
+
+        max.0
+    }
     
-   /// Check if index is monotonic increasing
+    /// Check if index is monotonic increasing
     /// 
     /// # Example
     /// 
@@ -64,15 +96,16 @@ impl DateTimeIndex {
         set.len() == self.values.len()
     }
 
+    /// Create iterator
+    pub fn iter(&self) -> std::slice::Iter<i64> {
+        self.values.iter()
+    }
+    
     /// Index length
     pub fn len(&self) -> usize {
         self.values.len()
     }
 
-    /// Create iterator
-    pub fn iter(&self) -> std::slice::Iter<i64> {
-        self.values.iter()
-    }
 }
 
 
