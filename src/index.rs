@@ -42,14 +42,12 @@ impl DateTimeIndex {
         let mut occurrences: HashMap<i64, i64> = HashMap::new();
         let mut max: (i64, i64) = (0, 0);
 
-        let diffs: Vec<i64> = self.values.iter().zip(self.values.iter().skip(1))
+        self.values.iter().zip(self.values.iter().skip(1))
             .map(|(x,y)| y-x)
-            .collect();
-
-        for entry in diffs {
-            let count = occurrences.entry(entry).or_insert(0);
-            *count += 1;
-        }
+            .for_each(|dt|{
+                let count = occurrences.entry(dt).or_insert(0);
+                *count += 1;
+            });
 
         for (&key, &val) in &occurrences {
             if val > max.1 {
