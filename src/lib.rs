@@ -284,6 +284,29 @@ impl cmp::PartialEq for TimeSeries {
     }
 }
 
+pub trait ToSeries {
+    fn to_series(&self) -> TimeSeries;
+}
+
+impl ToSeries for DateTimeIndex {
+    /// Convert index into TimeSeries
+    /// 
+    /// # Example
+    /// 
+    /// ```
+    /// use timeseries::index::DateTimeIndex;
+    /// use timeseries::{TimeSeries, ToSeries};
+    /// 
+    /// let xs = DateTimeIndex::new(vec![1, 2, 3, 4]);
+    /// let expected = TimeSeries::new(vec![1, 2, 3, 4], vec![1.0, 2.0, 3.0, 4.0]);
+    /// assert_eq!(xs.to_series(), expected);
+    /// ```
+    fn to_series(&self) -> TimeSeries {
+        let data = self.values.iter().map(|&v| v as f64).collect();
+        TimeSeries::new(self.values.to_owned(), data)
+    }
+}
+
 impl DataPoint {
 
     pub fn new(timestamp: i64, value: f64) -> DataPoint {

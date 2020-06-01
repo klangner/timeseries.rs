@@ -2,7 +2,6 @@ use std::ops::Index;
 use std::cmp;
 use std::iter::FromIterator;
 use std::collections::{HashSet, HashMap};
-use crate::TimeSeries;
 
 
 /// DateTimeIndex is represented as an array of timestamps (i64)
@@ -104,24 +103,6 @@ impl DateTimeIndex {
     pub fn len(&self) -> usize {
         self.values.len()
     }
-
-    /// Convert index into TimeSeries
-    /// 
-    /// # Example
-    /// 
-    /// ```
-    /// use timeseries::index::DateTimeIndex;
-    /// use timeseries::TimeSeries;
-    /// 
-    /// let xs = DateTimeIndex::new(vec![1, 2, 3, 4]);
-    /// let expected = TimeSeries::new(vec![1, 2, 3, 4], vec![1.0, 2.0, 3.0, 4.0]);
-    /// assert_eq!(xs.to_series(), expected);
-    /// ```
-    pub fn to_series(&self) -> TimeSeries {
-        let data = self.values.iter().map(|&v| v as f64).collect();
-        TimeSeries::new(self.values.to_owned(), data)
-    }
-
 }
 
 
