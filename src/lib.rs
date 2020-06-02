@@ -98,6 +98,31 @@ impl TimeSeries {
         TimeSeries { index: DateTimeIndex::new(index), values }
     }
 
+    /// Calculates the difference between series values
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use timeseries::TimeSeries;
+    ///
+    /// let index = vec![1, 2, 3, 4, 5];
+    /// let data = vec![1.0, 2.5, 3.0, 4.0, 3.0];
+    /// let ts = TimeSeries::new(index, data);
+    /// assert_eq!(ts.diff().values, vec![1.5, 0.5, 1.0, -1.0]);
+    /// ```
+    pub fn diff(&self) -> TimeSeries {
+        if self.len() < 2 {
+            TimeSeries::empty()
+        } else {
+            let index = self.index.values[1..].to_owned();
+            let mut new_values = vec![0.0; self.len()-1];
+            for i in 1..self.len() {
+                new_values[i-1] = self.values[i] - self.values[i-1];
+            }
+            TimeSeries::new(index, new_values)
+        }
+    }
+
     /// Returns the number of elements in the series.
     ///
     /// # Example
@@ -113,7 +138,6 @@ impl TimeSeries {
     pub fn len(&self) -> usize {
         self.index.len()
     }
-
     /// Return nth element of the series.
     ///
     /// # Example
