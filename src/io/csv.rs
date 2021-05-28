@@ -2,6 +2,7 @@ use std::error::Error;
 use csv;
 use chrono::prelude::*;
 use serde::Serialize;
+use dtinfer;
 
 use crate::TimeSeries;
 
@@ -14,14 +15,21 @@ struct Row {
 
 
 /// Load series from the given CSV file
-pub fn read_from_file(file_path: &str, datetime_format: &str) -> Result<TimeSeries, Box<dyn Error>> {
+pub fn read_from_file(file_path: &str) -> Result<TimeSeries, Box<dyn Error>> {
     let mut rdr = csv::Reader::from_path(file_path)?;
     let mut index: Vec<i64> = Vec::new();
     let mut data: Vec<f64> = Vec::new();
+    let mut infered_format: Option<String> = None;
     for result in rdr.records() {
         let record = result?;
-        if record.len() > 1 {
-            let idx = NaiveDateTime::parse_from_str(&record[0], datetime_format)?.timestamp_millis();
+        if infered_format.is_none() {
+            infered_format = dtinfer::infer_best(&record[0]);
+        }
+        if let Some(datetime_format) = &infered_format {
+            println!("[{}]", &record[0]);
+            println!("{}", &datetime_format);
+            println!("{:?}", NaiveDateTime::parse_from_str(&record[0], &datetime_format));
+            let idx = NaiveDateTime::parse_from_str(&record[0], &datetime_format)?.timestamp_millis();
             let v: f64 = record[1].parse::<f64>()?;
             index.push(idx);
             data.push(v);
@@ -56,7 +64,7 @@ mod tests {
 
     #[test]
     fn test_read() {
-        let ts = read_from_file("testdata/rain.csv", "%Y-%m-%d %H:%M:%S%z").unwrap();
+        let ts = read_from_file("testdata/rain.csv").unwrap();
         assert_eq!(ts.len(), 96670);
     }
 }

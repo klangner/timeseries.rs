@@ -138,6 +138,7 @@ impl TimeSeries {
     pub fn len(&self) -> usize {
         self.index.len()
     }
+
     /// Return nth element of the series.
     ///
     /// # Example

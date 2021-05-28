@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/klangner/timeseries.rs.svg?branch=master)](https://travis-ci.org/klangner/timeseries.rs)
 [![Crates.io](https://img.shields.io/crates/v/timeseries.svg)](https://crates.io/crates/timeseries) 
-[![Crates.io](https://img.shields.io/crates/l/timeseries.svg)](https://github.com/klangner/timeseries/blob/master/LICENSE-MIT) 
+[![Crates.io](https://img.shields.io/crates/l/timeseries.svg)](https://github.com/klangner/timeseries.rs/blob/master/LICENSE-MIT) 
 [![docs.rs](https://docs.rs/timeseries/badge.svg)](https://docs.rs/timeseries/)
 
 **timeseries is an early-stage open-source project**. It means that API can change at any time.

@@ -18,6 +18,7 @@ ndarray = "0.13"
 chrono = "0.4"
 rand = "0.7"
 csv = "1.1"
+dtinfer = "0.1"
 
 [dev-dependencies]
 assert_approx_eq = "1.1.0"
